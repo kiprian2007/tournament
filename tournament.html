@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Турнир вариантов</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0f0f13;
+      color: #e8e8f0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .screen { display: none; width: 100%; max-width: 640px; }
+    .screen.active { display: flex; flex-direction: column; align-items: center; gap: 20px; }
+
+    h1 { font-size: 2rem; font-weight: 700; letter-spacing: -0.5px; text-align: center; }
+    h2 { font-size: 1.4rem; font-weight: 600; text-align: center; color: #a0a0c0; }
+
+    .subtitle { color: #6060a0; font-size: 0.9rem; text-align: center; }
+
+    input[type="text"] {
+      width: 100%;
+      background: #1a1a24;
+      border: 1.5px solid #2a2a40;
+      border-radius: 12px;
+      color: #e8e8f0;
+      font-size: 1rem;
+      font-family: inherit;
+      padding: 13px 16px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input[type="text"]:focus { border-color: #5a5aff; }
+    input[type="text"]::placeholder { color: #404060; }
+
+    .field-wrap { width: 100%; display: flex; flex-direction: column; gap: 6px; }
+    .field-label { font-size: 0.8rem; color: #6060a0; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; }
+
+    .btn {
+      padding: 12px 28px;
+      border-radius: 10px;
+      border: none;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.1s, opacity 0.2s;
+      white-space: nowrap;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary { background: #5a5aff; color: #fff; }
+    .btn-primary:hover { opacity: 0.9; }
+    .btn-ghost { background: #1a1a24; color: #a0a0c0; border: 1.5px solid #2a2a40; }
+    .btn-ghost:hover { border-color: #5a5aff; color: #e8e8f0; }
+    .btn-danger { background: #1a1a24; color: #ff6060; border: 1.5px solid #2a2a40; }
+    .btn-danger:hover { border-color: #ff6060; }
+    .btn-sm { padding: 8px 16px; font-size: 0.85rem; border-radius: 8px; }
+
+    .error { color: #ff6060; font-size: 0.85rem; align-self: flex-start; }
+
+    .row { display: flex; gap: 10px; width: 100%; }
+    .row .btn { flex: 1; }
+
+    /* ── Home screen ─────────────────────────────────────────────────────── */
+    .lists-wrap { width: 100%; display: flex; flex-direction: column; gap: 10px; }
+
+    .list-card {
+      background: #1a1a24;
+      border: 1.5px solid #2a2a40;
+      border-radius: 14px;
+      padding: 16px 18px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transition: border-color 0.2s;
+    }
+    .list-card:hover { border-color: #3a3a60; }
+
+    .list-info { flex: 1; min-width: 0; }
+    .list-name { font-size: 1rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .list-count { font-size: 0.8rem; color: #50508080; margin-top: 2px; }
+
+    .list-actions { display: flex; gap: 8px; flex-shrink: 0; }
+
+    .empty-hint { color: #404060; font-size: 0.9rem; text-align: center; padding: 40px 0; }
+
+    /* ── Edit screen — item rows ──────────────────────────────────────────── */
+    .item-rows { width: 100%; display: flex; flex-direction: column; gap: 8px; }
+
+    .item-row {
+      background: #1a1a24;
+      border: 1.5px solid #2a2a40;
+      border-radius: 12px;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      transition: border-color 0.2s;
+    }
+    .item-row:focus-within { border-color: #3a3a5a; }
+
+    .item-row-main { display: flex; gap: 8px; align-items: center; }
+
+    .item-name-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid #2a2a40;
+      border-radius: 0;
+      padding: 3px 2px;
+      color: #e8e8f0;
+      font-size: 0.95rem;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .item-name-input:focus { border-bottom-color: #5a5aff; }
+    .item-name-input::placeholder { color: #404060; }
+
+    .btn-icon {
+      background: none; border: none; cursor: pointer;
+      color: #404060; font-size: 1rem; padding: 2px 4px;
+      border-radius: 6px; line-height: 1; flex-shrink: 0;
+      transition: color 0.15s, background 0.15s;
+    }
+    .btn-icon:hover { color: #ff6060; background: #ff606015; }
+
+    /* tag pills + input */
+    .item-tags-area { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; min-height: 26px; }
+
+    .tag-pill {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: #5a5aff18; border: 1px solid #5a5aff40;
+      border-radius: 20px; padding: 3px 4px 3px 10px;
+      font-size: 0.78rem; color: #9090d0;
+    }
+    .tag-pill-remove {
+      background: none; border: none; cursor: pointer;
+      color: #5050a0; font-size: 0.9rem; padding: 0 3px;
+      line-height: 1; border-radius: 50%;
+      transition: color 0.15s;
+    }
+    .tag-pill-remove:hover { color: #ff6060; }
+
+    .tag-input-wrap { position: relative; }
+
+    .tag-add-input {
+      background: transparent;
+      border: 1px dashed #2a2a40;
+      border-radius: 20px;
+      padding: 3px 11px;
+      color: #a0a0c0;
+      font-size: 0.78rem;
+      font-family: inherit;
+      width: 100px;
+      outline: none;
+      transition: border-color 0.2s, width 0.2s;
+    }
+    .tag-add-input:focus { border-color: #5a5aff; width: 130px; }
+    .tag-add-input::placeholder { color: #404060; }
+
+    .tag-dropdown {
+      display: none;
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0;
+      background: #1e1e2e;
+      border: 1.5px solid #3a3a54;
+      border-radius: 10px;
+      z-index: 50;
+      min-width: 160px;
+      max-height: 180px;
+      overflow-y: auto;
+      box-shadow: 0 8px 24px #00000060;
+    }
+    .tag-dropdown.open { display: block; }
+
+    .tag-dd-item {
+      padding: 8px 14px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      color: #a0a0c0;
+      transition: background 0.1s;
+    }
+    .tag-dd-item:hover { background: #2a2a40; color: #e8e8f0; }
+    .tag-dd-item.is-new { color: #5a5aff; }
+
+    .add-item-btn {
+      align-self: flex-start;
+      background: none; border: 1.5px dashed #2a2a40;
+      border-radius: 10px; padding: 9px 18px;
+      color: #404060; font-size: 0.85rem; font-weight: 600;
+      cursor: pointer; transition: border-color 0.2s, color 0.2s;
+      width: 100%;
+    }
+    .add-item-btn:hover { border-color: #5a5aff; color: #5a5aff; }
+
+    /* ── Tournament screen ───────────────────────────────────────────────── */
+    .progress-wrap { width: 100%; }
+    .progress-label {
+      display: flex; justify-content: space-between;
+      font-size: 0.8rem; color: #6060a0; margin-bottom: 8px;
+    }
+    .progress-bar { width: 100%; height: 4px; background: #1a1a24; border-radius: 4px; overflow: hidden; }
+    .progress-fill { height: 100%; background: #5a5aff; border-radius: 4px; transition: width 0.4s ease; }
+
+    .vs-label { font-size: 0.75rem; font-weight: 700; letter-spacing: 2px; color: #40406060; text-transform: uppercase; }
+
+    .cards { display: flex; gap: 16px; width: 100%; }
+
+    .card {
+      flex: 1; background: #1a1a24; border: 1.5px solid #2a2a40;
+      border-radius: 16px; padding: 28px 20px;
+      cursor: pointer; text-align: center;
+      font-size: 1.05rem; font-weight: 500; line-height: 1.5;
+      transition: border-color 0.2s, background 0.2s, transform 0.15s;
+      word-break: break-word; min-height: 110px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .card:hover { border-color: #5a5aff; background: #1e1e30; transform: translateY(-2px); }
+    .card:active { transform: scale(0.97); }
+    .card.chosen { border-color: #5a5aff; background: #1e1e30; animation: pulse 0.3s ease; }
+    .card.loser { opacity: 0.3; }
+
+    @keyframes pulse {
+      0%   { transform: scale(1); }
+      50%  { transform: scale(1.02); }
+      100% { transform: scale(1); }
+    }
+
+    /* ── Results screen ──────────────────────────────────────────────────── */
+    .result-list { width: 100%; display: flex; flex-direction: column; gap: 10px; }
+
+    .result-item {
+      display: flex; align-items: center; gap: 14px;
+      background: #1a1a24; border: 1.5px solid #2a2a40;
+      border-radius: 12px; padding: 14px 18px;
+    }
+    .result-item:first-child { border-color: #ffd700; background: #1e1c10; }
+    .result-item:nth-child(2) { border-color: #c0c0c0; background: #191919; }
+    .result-item:nth-child(3) { border-color: #cd7f32; background: #1a1510; }
+
+    .rank { font-size: 1.3rem; font-weight: 800; min-width: 32px; text-align: center; color: #40407080; }
+    .result-item:first-child .rank { color: #ffd700; }
+    .result-item:nth-child(2) .rank { color: #c0c0c0; }
+    .result-item:nth-child(3) .rank { color: #cd7f32; }
+
+    .result-name { flex: 1; font-size: 1rem; }
+    .result-item-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+    .result-tag-pill {
+      font-size: 0.7rem; color: #6060a0;
+      background: #5a5aff12; border: 1px solid #5a5aff25;
+      border-radius: 20px; padding: 2px 8px;
+    }
+    .wins {
+      font-size: 0.8rem; color: #40406080;
+      background: #0f0f13; padding: 4px 10px; border-radius: 20px; white-space: nowrap;
+    }
+
+    /* Tag results table */
+    .section-divider {
+      width: 100%; border: none; border-top: 1px solid #2a2a40; margin: 4px 0;
+    }
+    .section-title {
+      width: 100%; text-align: center;
+      font-size: 0.75rem; font-weight: 700; letter-spacing: 1.5px;
+      text-transform: uppercase; color: #40406080;
+    }
+
+    .tag-result-list { width: 100%; display: flex; flex-direction: column; gap: 8px; }
+
+    .tag-result-item {
+      display: flex; align-items: center; gap: 12px;
+      background: #1a1a24; border: 1.5px solid #2a2a40;
+      border-radius: 10px; padding: 11px 16px;
+    }
+    .tag-rank { font-size: 0.9rem; font-weight: 700; min-width: 22px; color: #404060; text-align: center; }
+    .tag-name { flex: 1; font-size: 0.9rem; color: #c0c0d8; }
+    .tag-bar-wrap { width: 70px; height: 3px; background: #2a2a40; border-radius: 2px; flex-shrink: 0; }
+    .tag-bar { height: 100%; background: #5a5aff; border-radius: 2px; }
+    .tag-score {
+      font-size: 0.78rem; color: #5a5aff;
+      background: #5a5aff18; padding: 3px 9px;
+      border-radius: 20px; white-space: nowrap;
+    }
+
+    /* ── Delete confirm overlay ───────────────────────────────────────────── */
+    .overlay {
+      display: none; position: fixed; inset: 0;
+      background: #0f0f13cc; backdrop-filter: blur(4px);
+      align-items: center; justify-content: center; z-index: 100;
+    }
+    .overlay.active { display: flex; }
+    .dialog {
+      background: #1a1a24; border: 1.5px solid #2a2a40;
+      border-radius: 16px; padding: 28px 28px 24px;
+      max-width: 360px; width: 90%; text-align: center;
+      display: flex; flex-direction: column; gap: 18px;
+    }
+    .dialog h3 { font-size: 1.1rem; font-weight: 700; }
+    .dialog p { color: #6060a0; font-size: 0.9rem; }
+    .dialog .row { justify-content: center; }
+  </style>
+</head>
+<body>
+
+<!-- SCREEN: Home -->
+<div class="screen active" id="screen-home">
+  <h1>Турнир вариантов</h1>
+  <div class="lists-wrap" id="lists-wrap"></div>
+  <button class="btn btn-primary" style="width:100%" onclick="openEdit(null)">+ Новый список</button>
+</div>
+
+<!-- SCREEN: Edit list -->
+<div class="screen" id="screen-edit">
+  <h1 id="edit-title">Новый список</h1>
+
+  <div class="field-wrap">
+    <span class="field-label">Название</span>
+    <input type="text" id="edit-name" placeholder="Любимая еда" maxlength="60">
+  </div>
+
+  <div class="field-wrap">
+    <span class="field-label">Варианты</span>
+    <div class="item-rows" id="item-rows"></div>
+    <button class="add-item-btn" onclick="addEditItem()">+ Добавить вариант</button>
+  </div>
+
+  <span class="error" id="edit-error"></span>
+  <div class="row">
+    <button class="btn btn-ghost" onclick="goHome()">Отмена</button>
+    <button class="btn btn-primary" onclick="saveList()">Сохранить</button>
+  </div>
+</div>
+
+<!-- SCREEN: Tournament -->
+<div class="screen" id="screen-tournament">
+  <div class="progress-wrap">
+    <div class="progress-label">
+      <span>Сравнение <span id="current-pair">1</span> из <span id="total-pairs">0</span></span>
+      <span id="progress-pct">0%</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+  </div>
+  <h2>Что лучше?</h2>
+  <div class="cards">
+    <div class="card" id="card-a" onclick="choose('a')"></div>
+    <div class="card" id="card-b" onclick="choose('b')"></div>
+  </div>
+  <span class="vs-label">vs</span>
+</div>
+
+<!-- SCREEN: Results -->
+<div class="screen" id="screen-results">
+  <h1 id="result-title">Рейтинг</h1>
+  <div class="result-list" id="result-list"></div>
+  <div id="tag-results-section"></div>
+  <div class="row">
+    <button class="btn btn-ghost" onclick="goHome()">К спискам</button>
+    <button class="btn btn-primary" id="btn-play-again" onclick="playAgain()">Ещё раз</button>
+  </div>
+</div>
+
+<!-- Delete confirm dialog -->
+<div class="overlay" id="overlay-delete">
+  <div class="dialog">
+    <h3>Удалить список?</h3>
+    <p id="delete-dialog-name"></p>
+    <div class="row">
+      <button class="btn btn-ghost" onclick="closeDeleteDialog()">Отмена</button>
+      <button class="btn btn-danger" onclick="confirmDelete()">Удалить</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── Storage ───────────────────────────────────────────────────────────────
+  const STORAGE_KEY = 'tournament_lists';
+
+  function loadLists() {
+    try { return (JSON.parse(localStorage.getItem(STORAGE_KEY)) || []).map(migrateList); }
+    catch { return []; }
+  }
+
+  function saveLists(lists) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(lists));
+  }
+
+  // Migrate old format {items: "a\nb"} → new format {tags:[], itemData:[{name,tags}]}
+  function migrateList(lst) {
+    if (lst.itemData) return lst;
+    const names = (lst.items || '').split('\n').map(s => s.trim()).filter(Boolean);
+    return { id: lst.id, name: lst.name, tags: [], itemData: names.map(n => ({ name: n, tags: [] })) };
+  }
+
+  function uid() {
+    return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  }
+
+  // ── Navigation ─────────────────────────────────────────────────────────────
+  function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+  }
+
+  function goHome() {
+    renderHome();
+    showScreen('screen-home');
+  }
+
+  // ── Home screen ────────────────────────────────────────────────────────────
+  function renderHome() {
+    const lists = loadLists();
+    const wrap = document.getElementById('lists-wrap');
+
+    if (lists.length === 0) {
+      wrap.innerHTML = '<p class="empty-hint">Нет сохранённых списков.<br>Создайте первый!</p>';
+      return;
+    }
+
+    wrap.innerHTML = lists.map(lst => {
+      const count = lst.itemData.length;
+      const tagCount = lst.tags.length;
+      const meta = count + ' вариант' + plural(count) + (tagCount ? ` · ${tagCount} тег${pluralTag(tagCount)}` : '');
+      return `
+        <div class="list-card">
+          <div class="list-info">
+            <div class="list-name">${escHtml(lst.name)}</div>
+            <div class="list-count">${meta}</div>
+          </div>
+          <div class="list-actions">
+            <button class="btn btn-ghost btn-sm" onclick="openEdit('${lst.id}')">Изменить</button>
+            <button class="btn btn-primary btn-sm" onclick="startTournament('${lst.id}')">Старт</button>
+            <button class="btn btn-danger btn-sm" onclick="openDeleteDialog('${lst.id}')">✕</button>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function plural(n) {
+    if (n % 10 === 1 && n % 100 !== 11) return '';
+    if (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) return 'а';
+    return 'ов';
+  }
+  function pluralTag(n) {
+    if (n % 10 === 1 && n % 100 !== 11) return '';
+    if (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) return 'а';
+    return 'ов';
+  }
+
+  // ── Edit screen state ──────────────────────────────────────────────────────
+  let editingId = null;
+  let editItems = []; // [{name: string, tags: string[]}]
+  let editTags  = []; // string[] — tag registry for current list
+
+  function openEdit(id) {
+    editingId = id;
+    document.getElementById('edit-error').textContent = '';
+
+    if (id === null) {
+      document.getElementById('edit-title').textContent = 'Новый список';
+      document.getElementById('edit-name').value = '';
+      editItems = [{ name: '', tags: [] }];
+      editTags  = [];
+    } else {
+      const lst = loadLists().find(l => l.id === id);
+      if (!lst) { goHome(); return; }
+      document.getElementById('edit-title').textContent = 'Редактировать';
+      document.getElementById('edit-name').value = lst.name;
+      editItems = lst.itemData.map(d => ({ name: d.name, tags: [...d.tags] }));
+      editTags  = [...lst.tags];
+    }
+
+    renderEditItems();
+    showScreen('screen-edit');
+    document.getElementById('edit-name').focus();
+  }
+
+  // Sync name inputs back into editItems before any structural change
+  function syncNames() {
+    document.querySelectorAll('#item-rows .item-row').forEach(row => {
+      const idx = parseInt(row.dataset.idx);
+      if (idx >= 0 && idx < editItems.length) {
+        editItems[idx].name = row.querySelector('.item-name-input').value;
+      }
+    });
+  }
+
+  function renderEditItems() {
+    const container = document.getElementById('item-rows');
+    if (editItems.length === 0) {
+      container.innerHTML = '';
+      return;
+    }
+    container.innerHTML = editItems.map((item, idx) => `
+      <div class="item-row" data-idx="${idx}">
+        <div class="item-row-main">
+          <input class="item-name-input" value="${escHtml(item.name)}" placeholder="Название варианта"
+                 oninput="editItems[${idx}].name = this.value"
+                 onkeydown="itemNameKeydown(${idx}, event)">
+          <button class="btn-icon" data-idx="${idx}" onclick="removeEditItem(this)" title="Удалить вариант">✕</button>
+        </div>
+        <div class="item-tags-area">
+          ${item.tags.map(t => tagPillHTML(idx, t)).join('')}
+          <div class="tag-input-wrap">
+            <input class="tag-add-input" placeholder="+ тег"
+                   data-idx="${idx}"
+                   oninput="onTagInput(this)"
+                   onkeydown="onTagKeydown(this, event)"
+                   onfocus="onTagInput(this)">
+            <div class="tag-dropdown" id="tag-dd-${idx}"></div>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function tagPillHTML(idx, tag) {
+    return `<span class="tag-pill">${escHtml(tag)}<button class="tag-pill-remove" data-idx="${idx}" data-tag="${escAttr(tag)}" onclick="removeItemTag(this)">×</button></span>`;
+  }
+
+  function itemNameKeydown(idx, event) {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      syncNames();
+      editItems.splice(idx + 1, 0, { name: '', tags: [] });
+      renderEditItems();
+      const rows = document.querySelectorAll('#item-rows .item-row');
+      if (rows[idx + 1]) rows[idx + 1].querySelector('.item-name-input').focus();
+    }
+  }
+
+  function addEditItem() {
+    syncNames();
+    editItems.push({ name: '', tags: [] });
+    renderEditItems();
+    const rows = document.querySelectorAll('#item-rows .item-row');
+    if (rows.length) rows[rows.length - 1].querySelector('.item-name-input').focus();
+  }
+
+  function removeEditItem(btn) {
+    syncNames();
+    const idx = parseInt(btn.dataset.idx);
+    editItems.splice(idx, 1);
+    renderEditItems();
+  }
+
+  // ── Tag input ──────────────────────────────────────────────────────────────
+  function onTagInput(inputEl) {
+    const idx = parseInt(inputEl.dataset.idx);
+    const val = inputEl.value.trim().toLowerCase();
+    const ddEl = document.getElementById(`tag-dd-${idx}`);
+    const alreadyOn = editItems[idx].tags.map(t => t.toLowerCase());
+
+    let candidates;
+    if (!val) {
+      candidates = editTags.filter(t => !alreadyOn.includes(t.toLowerCase()));
+    } else {
+      candidates = editTags.filter(t =>
+        t.toLowerCase().includes(val) && !alreadyOn.includes(t.toLowerCase())
+      );
+    }
+
+    const rawVal = inputEl.value.trim();
+    const isNew = rawVal && !editTags.some(t => t.toLowerCase() === rawVal.toLowerCase());
+
+    if (candidates.length === 0 && !isNew) {
+      ddEl.classList.remove('open');
+      ddEl.innerHTML = '';
+      return;
+    }
+
+    ddEl.innerHTML = [
+      ...candidates.map(t => `<div class="tag-dd-item" data-tag="${escAttr(t)}" data-idx="${idx}" onmousedown="handleDdClick(this,event)">${escHtml(t)}</div>`),
+      ...(isNew ? [`<div class="tag-dd-item is-new" data-tag="${escAttr(rawVal)}" data-idx="${idx}" onmousedown="handleDdClick(this,event)">Создать «${escHtml(rawVal)}»</div>`] : [])
+    ].join('');
+    ddEl.classList.add('open');
+  }
+
+  function onTagKeydown(inputEl, event) {
+    const idx = parseInt(inputEl.dataset.idx);
+    const ddEl = document.getElementById(`tag-dd-${idx}`);
+
+    if (event.key === 'Enter' || event.key === ',') {
+      event.preventDefault();
+      const val = inputEl.value.trim();
+      if (val) { addItemTag(idx, val, inputEl); }
+    } else if (event.key === 'Escape') {
+      ddEl.classList.remove('open');
+      ddEl.innerHTML = '';
+      inputEl.blur();
+    } else if (event.key === 'Tab') {
+      const val = inputEl.value.trim();
+      if (val) { event.preventDefault(); addItemTag(idx, val, inputEl); }
+    }
+  }
+
+  function handleDdClick(el, event) {
+    event.preventDefault(); // keep input focused
+    const idx = parseInt(el.dataset.idx);
+    const tag = el.dataset.tag;
+    const row = document.querySelector(`#item-rows .item-row[data-idx="${idx}"]`);
+    const inputEl = row.querySelector('.tag-add-input');
+    addItemTag(idx, tag, inputEl);
+  }
+
+  function addItemTag(idx, tag, inputEl) {
+    tag = tag.trim();
+    if (!tag) return;
+    if (editItems[idx].tags.some(t => t.toLowerCase() === tag.toLowerCase())) {
+      if (inputEl) { inputEl.value = ''; closeAllDropdowns(); }
+      return;
+    }
+
+    editItems[idx].tags.push(tag);
+    if (!editTags.some(t => t.toLowerCase() === tag.toLowerCase())) {
+      editTags.push(tag);
+    }
+
+    // Insert pill before the tag-input-wrap
+    const row = document.querySelector(`#item-rows .item-row[data-idx="${idx}"]`);
+    const tagsArea = row.querySelector('.item-tags-area');
+    const inputWrap = row.querySelector('.tag-input-wrap');
+    const pillEl = document.createElement('span');
+    pillEl.className = 'tag-pill';
+    pillEl.innerHTML = `${escHtml(tag)}<button class="tag-pill-remove" data-idx="${idx}" data-tag="${escAttr(tag)}" onclick="removeItemTag(this)">×</button>`;
+    tagsArea.insertBefore(pillEl, inputWrap);
+
+    if (inputEl) { inputEl.value = ''; inputEl.focus(); }
+    closeAllDropdowns();
+  }
+
+  function removeItemTag(btn) {
+    const idx = parseInt(btn.dataset.idx);
+    const tag = btn.dataset.tag;
+    editItems[idx].tags = editItems[idx].tags.filter(t => t !== tag);
+    btn.closest('.tag-pill').remove();
+  }
+
+  function closeAllDropdowns() {
+    document.querySelectorAll('.tag-dropdown.open').forEach(d => {
+      d.classList.remove('open');
+      d.innerHTML = '';
+    });
+  }
+
+  // Close dropdowns on outside click
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.tag-input-wrap')) closeAllDropdowns();
+  });
+
+  // ── Save list ──────────────────────────────────────────────────────────────
+  function saveList() {
+    syncNames();
+    const name = document.getElementById('edit-name').value.trim();
+    const err  = document.getElementById('edit-error');
+
+    if (!name) { err.textContent = 'Введите название списка.'; return; }
+
+    const validItems = editItems.filter(d => d.name.trim());
+    const seen = new Set();
+    const unique = validItems.filter(d => {
+      const k = d.name.trim().toLowerCase();
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    }).map(d => ({ name: d.name.trim(), tags: d.tags }));
+
+    if (unique.length < 2) { err.textContent = 'Введите минимум 2 варианта.'; return; }
+    if (unique.length > 30) { err.textContent = 'Не более 30 вариантов.'; return; }
+
+    err.textContent = '';
+    const lists = loadLists();
+
+    // Keep only tags that are still used
+    const usedTags = [...new Set(unique.flatMap(d => d.tags))];
+    const finalTags = [...new Set([...editTags, ...usedTags])];
+
+    if (editingId === null) {
+      lists.push({ id: uid(), name, tags: finalTags, itemData: unique });
+    } else {
+      const idx = lists.findIndex(l => l.id === editingId);
+      if (idx !== -1) lists[idx] = { ...lists[idx], name, tags: finalTags, itemData: unique };
+    }
+
+    saveLists(lists);
+    goHome();
+  }
+
+  // ── Delete dialog ──────────────────────────────────────────────────────────
+  let deleteTargetId = null;
+
+  function openDeleteDialog(id) {
+    deleteTargetId = id;
+    const lst = loadLists().find(l => l.id === id);
+    document.getElementById('delete-dialog-name').textContent = lst ? lst.name : '';
+    document.getElementById('overlay-delete').classList.add('active');
+  }
+
+  function closeDeleteDialog() {
+    deleteTargetId = null;
+    document.getElementById('overlay-delete').classList.remove('active');
+  }
+
+  function confirmDelete() {
+    if (!deleteTargetId) return;
+    saveLists(loadLists().filter(l => l.id !== deleteTargetId));
+    closeDeleteDialog();
+    renderHome();
+  }
+
+  document.getElementById('overlay-delete').addEventListener('click', function(e) {
+    if (e.target === this) closeDeleteDialog();
+  });
+
+  // ── Tournament ─────────────────────────────────────────────────────────────
+  let items       = [];
+  let itemTagsMap = {}; // index → string[]
+  let pairs       = [];
+  let pairIndex   = 0;
+  let wins        = {};
+  let choosing    = false;
+  let currentListId = null;
+
+  function startTournament(id) {
+    const lst = loadLists().find(l => l.id === id);
+    if (!lst) { goHome(); return; }
+
+    currentListId = id;
+    items       = lst.itemData.map(d => d.name);
+    itemTagsMap = {};
+    lst.itemData.forEach((d, i) => itemTagsMap[i] = d.tags);
+
+    pairs = [];
+    for (let i = 0; i < items.length; i++)
+      for (let j = i + 1; j < items.length; j++)
+        pairs.push([i, j]);
+
+    // Fisher-Yates shuffle
+    for (let i = pairs.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [pairs[i], pairs[j]] = [pairs[j], pairs[i]];
+    }
+
+    wins = {};
+    items.forEach((_, i) => wins[i] = 0);
+    pairIndex = 0;
+    choosing  = false;
+
+    document.getElementById('total-pairs').textContent = pairs.length;
+    showScreen('screen-tournament');
+    renderPair();
+  }
+
+  function playAgain() {
+    if (currentListId) startTournament(currentListId);
+  }
+
+  function renderPair() {
+    const [a, b] = pairs[pairIndex];
+    document.getElementById('card-a').textContent = items[a];
+    document.getElementById('card-b').textContent = items[b];
+    document.getElementById('card-a').className = 'card';
+    document.getElementById('card-b').className = 'card';
+    document.getElementById('current-pair').textContent = pairIndex + 1;
+
+    const pct = Math.round((pairIndex / pairs.length) * 100);
+    document.getElementById('progress-fill').style.width = pct + '%';
+    document.getElementById('progress-pct').textContent = pct + '%';
+  }
+
+  function choose(side) {
+    if (choosing) return;
+    choosing = true;
+
+    const [a, b] = pairs[pairIndex];
+    wins[side === 'a' ? a : b]++;
+
+    document.getElementById('card-' + side).classList.add('chosen');
+    document.getElementById(side === 'a' ? 'card-b' : 'card-a').classList.add('loser');
+
+    setTimeout(() => {
+      pairIndex++;
+      if (pairIndex >= pairs.length) showResults();
+      else { choosing = false; renderPair(); }
+    }, 300);
+  }
+
+  // ── Results ────────────────────────────────────────────────────────────────
+  function showResults() {
+    const lst = loadLists().find(l => l.id === currentListId);
+    document.getElementById('result-title').textContent = lst ? lst.name : 'Рейтинг';
+
+    const sorted = items
+      .map((name, i) => ({ name, wins: wins[i], tags: itemTagsMap[i] || [] }))
+      .sort((a, b) => b.wins - a.wins);
+
+    const medals = ['', '🥇', '🥈', '🥉'];
+    document.getElementById('result-list').innerHTML = sorted.map((item, idx) => `
+      <div class="result-item">
+        <span class="rank">${medals[idx + 1] || idx + 1}</span>
+        <span class="result-name">
+          ${escHtml(item.name)}
+          ${item.tags.length ? `<div class="result-item-tags" style="margin-top:4px">${item.tags.map(t => `<span class="result-tag-pill">${escHtml(t)}</span>`).join('')}</div>` : ''}
+        </span>
+        <span class="wins">${item.wins} побед</span>
+      </div>
+    `).join('');
+
+    // Tag scores
+    const tagScores = {};
+    items.forEach((_, i) => {
+      (itemTagsMap[i] || []).forEach(tag => {
+        tagScores[tag] = (tagScores[tag] || 0) + wins[i];
+      });
+    });
+    const sortedTags = Object.entries(tagScores).sort((a, b) => b[1] - a[1]);
+
+    const tagSection = document.getElementById('tag-results-section');
+    if (sortedTags.length === 0) {
+      tagSection.innerHTML = '';
+    } else {
+      const maxScore = sortedTags[0][1] || 1;
+      tagSection.innerHTML = `
+        <hr class="section-divider">
+        <p class="section-title">Рейтинг тегов</p>
+        <div class="tag-result-list">
+          ${sortedTags.map(([tag, score], idx) => `
+            <div class="tag-result-item">
+              <span class="tag-rank">${idx + 1}</span>
+              <span class="tag-name">${escHtml(tag)}</span>
+              <div class="tag-bar-wrap"><div class="tag-bar" style="width:${Math.round(score / maxScore * 100)}%"></div></div>
+              <span class="tag-score">${score} побед</span>
+            </div>
+          `).join('')}
+        </div>`;
+    }
+
+    showScreen('screen-results');
+  }
+
+  // ── Utils ──────────────────────────────────────────────────────────────────
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function escAttr(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
+  // ── Init ───────────────────────────────────────────────────────────────────
+  renderHome();
+</script>
+</body>
+</html>
