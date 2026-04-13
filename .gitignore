@@ -1,1 +1,4 @@
 todoist_export.py
+node_modules/
+data/
+uploads/
